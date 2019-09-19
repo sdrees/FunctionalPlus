@@ -2,18 +2,24 @@ cmake_minimum_required(VERSION 3.2)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
-project(FunctionalPlus VERSION 0.2)
+project(FunctionalPlus VERSION 0.2.3)
 
 message(STATUS "===( ${PROJECT_NAME} ${PROJECT_VERSION} )===")
-
 option(FPLUS_USE_TOOLCHAIN "Use compiler flags from an external toolchain" OFF)
 option(FPLUS_BUILD_EXAMPLES "Build examples" ON)
 option(FPLUS_BUILD_UNITTEST "Build unit tests" OFF)
+option(FPLUS_UNITTEST_USE_CONAN "Use conan to get doctest dependency (for unit tests only)" OFF)
+
 message(STATUS "Building Unit Tests ${FPLUS_BUILD_UNITTEST}")
+message(STATUS "Use conan ${FPLUS_UNITTEST_USE_CONAN}")
 message(STATUS "Building examples ${FPLUS_BUILD_EXAMPLES}")
 
 if(NOT FPLUS_USE_TOOLCHAIN)
-  include(cmake/toolchain.cmake)
+  if (MSVC)
+    include(cmake/toolchain_msvc.cmake)
+  else()
+    include(cmake/toolchain.cmake)
+  endif()
 endif()
 
 add_library(fplus INTERFACE)

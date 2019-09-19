@@ -39,11 +39,6 @@ template <typename ContainerIn1,
 ContainerOut zip_with(F f, const ContainerIn1& xs, const ContainerIn2& ys)
 {
     internal::trigger_static_asserts<internal::zip_with_tag, F, X, Y>();
-    static_assert(
-      std::is_same<
-          typename internal::same_cont_new_t<ContainerIn1, int>::type,
-          typename internal::same_cont_new_t<ContainerIn2, int>::type>::value,
-      "Both Containers must be of same outer type.");
     ContainerOut result;
     std::size_t resultSize = std::min(size_of_cont(xs), size_of_cont(ys));
     internal::prepare_container(result, resultSize);
@@ -272,7 +267,8 @@ auto swap_pairs_elems(const ContainerIn& xs)
 // API search type: adjacent_pairs : [a] -> [(a, a)]
 // fwd bind count: 0
 // Split a sequence into pairs of elements.
-// adjacent_pairs([0,1,2,3,4]) == [(0,1),(2,3)]
+// adjacent_pairs([0,1,2,3,4]) == [(0,1), (2,3)]
+// Also known as zip_with_next.
 template <typename Container,
     typename ContainerOut =
         typename internal::same_cont_new_t<Container,

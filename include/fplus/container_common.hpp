@@ -335,7 +335,7 @@ Container get_segment(internal::reuse_container_t,
     if (idx_end <= idx_begin)
     {
         xs.clear();
-        return xs;
+        return std::forward<Container>(xs);
     }
     auto itBegin = std::begin(xs);
     internal::advance_iterator(itBegin, idx_begin);
@@ -851,7 +851,7 @@ Acc fold_left(F f, const Acc& init, const Container& xs)
     using std::begin;
     using std::end;
 
-    return std::accumulate(begin(xs), end(xs), init, f);
+    return internal::accumulate(begin(xs), end(xs), init, f);
 }
 
 // API search type: reduce : (((a, a) -> a), a, [a]) -> a
@@ -882,7 +882,7 @@ auto fold_left_1(F f, const Container& xs)
     using std::end;
 
     const auto it = begin(xs);
-    return std::accumulate(std::next(it), end(xs), *it, f);
+    return internal::accumulate(std::next(it), end(xs), *it, f);
 }
 
 // API search type: reduce_1 : (((a, a) -> a), [a]) -> a
@@ -906,7 +906,7 @@ typename Container::value_type reduce_1(F f, const Container& xs)
 template <typename F, typename Container, typename Acc>
 Acc fold_right(F f, const Acc& init, const Container& xs)
 {
-    return std::accumulate(xs.rbegin(), xs.rend(), init, flip(f));
+    return internal::accumulate(xs.rbegin(), xs.rend(), init, flip(f));
 }
 
 // API search type: fold_right_1 : (((a, a) -> a), [a]) -> a
@@ -919,7 +919,7 @@ auto fold_right_1(F f, const Container& xs)
 {
     assert(!xs.empty());
     const auto it = xs.rbegin();
-    return std::accumulate(std::next(it), xs.rend(), *it, flip(f));
+    return internal::accumulate(std::next(it), xs.rend(), *it, flip(f));
 }
 
 // API search type: scan_left : (((a, b) -> a), a, [b]) -> [a]
@@ -1128,12 +1128,12 @@ ContainerOut prepend_elem(const T& y, Container&& xs)
 
 // API search type: append : ([a], [a]) -> [a]
 // fwd bind count: 1
-// Concatenaes two sequences.
+// Concatenates two sequences.
 // append([1, 2], [3, 4, 5]) == [1, 2, 3, 4, 5]
-template <typename Container>
-Container append(const Container& xs, const Container& ys)
+template <typename ContainerIn1, typename ContainerIn2 = ContainerIn1, typename ContainerOut = ContainerIn1>
+ContainerOut append(const ContainerIn1& xs, const ContainerIn2& ys)
 {
-    Container result;
+    ContainerOut result;
     internal::prepare_container(result, size_of_cont(xs) + size_of_cont(ys));
     std::copy(std::begin(xs), std::end(xs),
         internal::get_back_inserter(result));
@@ -1142,9 +1142,20 @@ Container append(const Container& xs, const Container& ys)
     return result;
 }
 
+
+// API search type: append_convert : ([a], [a]) -> [a]
+// fwd bind count: 1
+// Same as append, but makes it easier to
+// use an output container type different from the input container type.
+template <typename ContainerOut, typename ContainerIn1, typename ContainerIn2 = ContainerIn1>
+ContainerOut append_convert(const ContainerIn1& xs, const ContainerIn2& ys)
+{
+    return append<ContainerIn1, ContainerIn2, ContainerOut>(xs, ys);
+}
+
 // API search type: concat : [[a]] -> [a]
 // fwd bind count: 0
-// Concatenaes multiple sequences.
+// Concatenates multiple sequences.
 // concat([[1, 2], [], [3]]) == [1, 2, 3]
 // Also known as flatten.
 template <typename ContainerIn,
@@ -1155,6 +1166,8 @@ ContainerOut concat(const ContainerIn& xss)
         transform(size_of_cont<typename ContainerIn::value_type>, xss));
     ContainerOut result;
     internal::prepare_container(result, length);
+    using std::begin;
+    using std::end;
     for(const auto& xs : xss)
     {
         result.insert(end(result), begin(xs), end(xs));
@@ -1592,7 +1605,7 @@ Container intersperse(const X& value, const Container& xs)
 // Inserts a separator sequence in between the elements
 // of a sequence of sequences and concatenates the result.
 // Also known as intercalate or implode.
-// join(", ", "["a", "bee", "cee"]) == "a, bee, cee"
+// join(", ", ["a", "bee", "cee"]) == "a, bee, cee"
 // join([0, 0], [[1], [2], [3, 4]]) == [1, 0, 0, 2, 0, 0, 3, 4]
 template <typename Container,
     typename X = typename Container::value_type>
@@ -1606,7 +1619,7 @@ X join(const X& separator, const Container& xs)
 // Inserts a separator in between the elements
 // of a sequence of sequences and concatenates the result.
 // Also known as intercalate_elem.
-// join_elem(';', "["a", "bee", "cee"]) == "a;bee;cee"
+// join_elem(';', ["a", "bee", "cee"]) == "a;bee;cee"
 // join_elem(0, [[1], [2], [3, 4]]) == [1, 0, 2, 0, 3, 4]]
 template <typename Container,
     typename Inner = typename Container::value_type,
@@ -2009,7 +2022,7 @@ std::pair<Result, Result> mean_stddev(const Container& xs)
 
     // http://stackoverflow.com/a/7616783/1866775
     Result sum = static_cast<Result>(
-        std::accumulate(xs.begin(), xs.end(),
+        internal::accumulate(xs.begin(), xs.end(),
             static_cast<typename Container::value_type>(0)));
     Result mean = sum / static_cast<Result>(xs.size());
 

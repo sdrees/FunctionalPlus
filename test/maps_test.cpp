@@ -5,7 +5,7 @@
 //  http://www.boost.org/LICENSE_1_0.txt)
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "doctest.h"
+#include "doctest/doctest.h"
 #include <fplus/fplus.hpp>
 #include <vector>
 
@@ -162,6 +162,13 @@ TEST_CASE("maps_test, map functions")
     REQUIRE_EQ(map_contains(intStringMap, 1), true);
     REQUIRE_EQ(map_contains(intStringMap, 9), false);
 
+    REQUIRE_EQ(get_first_from_map(intStringMap, IntVector({4, 1})), just<std::string>("53"));
+    REQUIRE_EQ(get_first_from_map(intStringMap, IntVector({5, 1})), just<std::string>("2"));
+    REQUIRE_EQ(get_first_from_map(intStringMap, IntVector({5, 2})), nothing<std::string>());
+    REQUIRE_EQ(get_first_from_map_with_def(intStringMap, std::string("n/a"), IntVector({4, 1})), "53");
+    REQUIRE_EQ(get_first_from_map_with_def(intStringMap, std::string("n/a"), IntVector({5, 1})), "2");
+    REQUIRE_EQ(get_first_from_map_with_def(intStringMap, std::string("n/a"), IntVector({5, 2})), "n/a");
+
     IntStringMap union_map_1 = {{0, "a"}, {1, "b"}};
     IntStringMap union_map_2 = {{0, "c"}, {2, "d"}};
     IntStringMap union_map_res = {{0, "a"}, {1, "b"}, {2, "d"}};
@@ -169,21 +176,35 @@ TEST_CASE("maps_test, map functions")
     REQUIRE_EQ(map_union(union_map_1, union_map_2), union_map_res);
     REQUIRE_EQ(map_union_with(append<std::string>, union_map_1, union_map_2), union_map_with_res);
 
+    IntStringUnorderedMap union_umap_1 = {{0, "a"}, {1, "b"}};
+    IntStringUnorderedMap union_umap_2 = {{0, "c"}, {2, "d"}};
+    IntStringUnorderedMap union_umap_res = {{0, "a"}, {1, "b"}, {2, "d"}};
+    IntStringUnorderedMap union_umap_with_res = {{0, "ac"}, {1, "b"}, {2, "d"}};
+    REQUIRE_EQ(map_union(union_umap_1, union_umap_2), union_umap_res);
+    REQUIRE_EQ(map_union_with(append<std::string>, union_umap_1, union_umap_2), union_umap_with_res);
+
     typedef std::map<std::string::value_type, int> CharIntMap;
+    typedef std::map<int, std::string::value_type> IntCharMap;
     CharIntMap charIntMap = {{'a', 1}, {'b', 2}, {'A', 3}, {'C', 4}};
+    IntCharMap intCharMap = {{1, 'a'}, {2, 'b'}, {3, 'A'}, {4, 'C'}};
     const auto is_upper = [](std::string::value_type c) -> bool
     {
-        return std::isupper(c);
+        return (std::isupper(c) != 0);
     };
     const auto is_lower = [](std::string::value_type c) -> bool
     {
-        return std::islower(c);
+        return (std::islower(c) != 0);
     };
     REQUIRE_EQ(map_keep_if(is_upper, charIntMap), CharIntMap({{'A', 3}, {'C', 4}}));
     REQUIRE_EQ(map_drop_if(is_lower, charIntMap), CharIntMap({{'A', 3}, {'C', 4}}));
     typedef std::vector<std::string::value_type> CharVector;
     REQUIRE_EQ(map_keep(CharVector({'b', 'F'}), charIntMap), CharIntMap({{'b', 2}}));
     REQUIRE_EQ(map_drop(CharVector({'a', 'A', 'C', 'F'}), charIntMap), CharIntMap({{'b', 2}}));
+
+    REQUIRE_EQ(map_keep_if_value(is_upper, intCharMap), IntCharMap({{3, 'A'}, {4, 'C'}}));
+    REQUIRE_EQ(map_drop_if_value(is_lower, intCharMap), IntCharMap({{3, 'A'}, {4, 'C'}}));
+    REQUIRE_EQ(map_keep_values(CharVector({'b', 'F'}), intCharMap), IntCharMap({{2, 'b'}}));
+    REQUIRE_EQ(map_drop_values(CharVector({'a', 'A', 'C', 'F'}), intCharMap), IntCharMap({{2, 'b'}}));
 
     typedef std::vector<CharIntMap> CharIntMaps;
     typedef std::vector<maybe<int>> MaybeInts;

@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-./generate_database.sh
+./compile_all.sh
 cd frontend
-./compile.sh
-./ExploreCompile.sh
 ./deploy.sh

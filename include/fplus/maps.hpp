@@ -87,8 +87,11 @@ auto transform_map_values(F f, const MapIn& map)
 template <typename F, typename MapIn>
 auto map_union_with(F f, const MapIn& dict1, const MapIn& dict2)
 {
-    auto full_map = pairs_to_map_grouped(
-            append(map_to_pairs(dict1), map_to_pairs(dict2)));
+    const auto both = append(map_to_pairs(dict1), map_to_pairs(dict2));
+    using Key = typename decltype(both)::value_type::first_type;
+    using SingleValue = typename decltype(both)::value_type::second_type;
+    auto full_map = pairs_to_map_grouped<decltype(both), Key, SingleValue,
+            typename internal::SameMapTypeNewTypes<MapIn, Key, std::vector<SingleValue>>::type>(both);
     const auto group_f = [f](const auto& vals)
     {
         return fold_left_1(f, vals);
@@ -237,12 +240,7 @@ template <typename MapType,
     typename Val = typename MapType::mapped_type>
 Val get_from_map_unsafe(const MapType& map, const Key& key)
 {
-    auto it = map.find(key);
-    if (it == std::end(map))
-    {
-        assert(false); // Key not present in map.
-    }
-    return it->second;
+    return unsafe_get_just(get_from_map(map, key));
 }
 
 // API search type: get_from_map_with_def : (Map key val, val, key) -> val
@@ -257,6 +255,54 @@ Val get_from_map_with_def(const MapType& map, const Val& defVal,
     const Key& key)
 {
     return just_with_default(defVal, get_from_map(map, key));
+}
+
+// API search type: get_first_from_map : (Map key val, [key]) -> Maybe val
+// fwd bind count: 1
+// Returns just the value of the first key present.
+// Otherwise returns nothing.
+template <typename MapType,
+    typename KeysContainer,
+    typename Key = typename MapType::key_type,
+    typename Val = typename MapType::mapped_type>
+maybe<Val> get_first_from_map(const MapType& map, const KeysContainer& keys)
+{
+    static_assert(std::is_same<typename KeysContainer::value_type, Key>::value,
+        "Key type does not match.");
+    for (const auto& key: keys)
+    {
+        auto it = map.find(key);
+        if (it != std::end(map))
+            return just(it->second);
+    }
+    return nothing<Val>();
+}
+
+// API search type: get_first_from_map_unsafe : (Map key val, [key]) -> val
+// fwd bind count: 1
+// Returns the value of the first key present.
+// Crashes otherwise.
+template <typename MapType,
+    typename KeysContainer,
+    typename Key = typename MapType::key_type,
+    typename Val = typename MapType::mapped_type>
+Val get_first_from_map_unsafe(const MapType& map, const KeysContainer& keys)
+{
+    return unsafe_get_just(get_first_from_map(map, keys));
+}
+
+// API search type: get_first_from_map_with_def : (Map key val, val, [key]) -> val
+// fwd bind count: 2
+// Returns the value of the first key present.
+// Otherwise returns the provided default.
+template <typename MapType,
+    typename KeysContainer,
+    typename Key = typename MapType::key_type,
+    typename Val = typename MapType::mapped_type>
+Val get_first_from_map_with_def(const MapType& map, const Val& defVal,
+    const KeysContainer& keys)
+{
+    return just_with_default(defVal, get_first_from_map(map, keys));
 }
 
 // API search type: map_contains : (Map key val, key) -> Bool
@@ -319,7 +365,7 @@ MapType map_keep(const KeyContainer& keys, const MapType& map)
 // fwd bind count: 1
 // Keeps only the pairs of the map not found in the key list.
 // Inverse of map_keep.
-// map_drop([b, c], {a: 1, b: 2, c: 3, d: 4}); //=> {a: 1, d: 4}
+// map_drop([b, c], {a: 1, b: 2, c: 3, d: 4}); == {a: 1, d: 4}
 template <typename MapType, typename KeyContainer>
 MapType map_drop(const KeyContainer& keys, const MapType& map)
 {
@@ -328,6 +374,68 @@ MapType map_drop(const KeyContainer& keys, const MapType& map)
         typename MapType::key_type>::value,
         "Key types do not match.");
     return map_drop_if(bind_2nd_of_2(is_elem_of<KeyContainer>, keys), map);
+}
+
+// API search type: map_keep_if_value : ((val -> Bool), Map key val) -> Map key val
+// fwd bind count: 1
+// Filters the map by values.
+// map_keep_if_value(is_upper_case, {1: a, 2: b, 3: A, 4: C}) == {3: A, 4: C}
+// Also known as filter_values.
+template <typename MapType, typename Pred>
+MapType map_keep_if_value(Pred pred, const MapType& map)
+{
+    MapType result;
+    for (const auto& key_and_value : map)
+    {
+        if (internal::invoke(pred, key_and_value.second))
+        {
+            result.insert(key_and_value);
+        }
+    }
+    return result;
+}
+
+// API search type: map_drop_if_value : ((value -> Bool), Map key val) -> Map key val
+// fwd bind count: 1
+// Filters the map by values.
+// map_drop_if_value(is_lower_case, {1: a, 2: b, 3: A, 4: C}) == {3: A, 4: C}
+// Inverse of map_keep_if_value.
+template <typename MapType, typename Pred>
+MapType map_drop_if_value(Pred pred, const MapType& map)
+{
+    return map_keep_if_value(logical_not(pred), map);
+}
+
+// API search type: map_keep_values : ([value], Map key val) -> Map key val
+// fwd bind count: 1
+// Keeps only the pairs of the map found in the value list.
+// map_keep_values([1, 4], {a: 1, b: 2, c: 3, d: 4}) == {a: 1, d: 4}
+// map_keep_values([1, 5, 6], {a: 1, b: 2, c: 3, d: 4}) == {a: 1}
+template <typename MapType, typename ValueContainer>
+MapType map_keep_values(const ValueContainer& values, const MapType& map)
+{
+    static_assert(std::is_same<
+        typename ValueContainer::value_type,
+        typename MapType::mapped_type>::value,
+        "Value types do not match.");
+    return map_keep_if_value(
+        bind_2nd_of_2(is_elem_of<ValueContainer>, values), map);
+}
+
+// API search type: map_drop_values : ([value], Map key val) -> Map key val
+// fwd bind count: 1
+// Keeps only the pairs of the map not found in the value list.
+// Inverse of map_keep_values.
+// map_drop_values([2, 3], {a: 1, b: 2, c: 3, d: 4}) == {a: 1, d: 4}
+template <typename MapType, typename ValueContainer>
+MapType map_drop_values(const ValueContainer& values, const MapType& map)
+{
+    static_assert(std::is_same<
+        typename ValueContainer::value_type,
+        typename MapType::mapped_type>::value,
+        "Value types do not match.");
+    return map_drop_if_value(
+        bind_2nd_of_2(is_elem_of<ValueContainer>, values), map);
 }
 
 // API search type: map_pluck : (key, [Map key val]) -> [val]

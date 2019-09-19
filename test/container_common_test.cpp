@@ -5,9 +5,10 @@
 //  http://www.boost.org/LICENSE_1_0.txt)
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "doctest.h"
+#include "doctest/doctest.h"
 #include <fplus/fplus.hpp>
 #include <vector>
+#include <deque>
 
 namespace {
     auto squareLambda = [](int x) -> int { return x*x; };
@@ -21,8 +22,10 @@ namespace {
     typedef std::vector<bool> BoolVector;
     typedef std::vector<std::size_t> IdxVector;
     typedef std::array<int, 5> IntArray5;
+    typedef std::deque<int> IntDeque;
     IntVector xs = {1,2,2,3,2};
     IntArray5 xs_arr = {{1,2,2,3,2}};
+    IntDeque  xs_deque = {1,2,2,3,2};
     IntVector xs_reverse = {2,3,2,2,1};
     IntVector xsSorted = {1,2,2,2,3};
     IntVector xs2Times = {1,2,2,3,2,1,2,2,3,2};
@@ -39,7 +42,7 @@ namespace {
     typedef std::vector<std::string> string_vec;
     IntVector vec0123({0,1,2,3});
     IntList list0123({0,1,2,3});
-    std::string ABC("ABC");
+    std::string ABC_("ABC");
     std::string XY("XY");
     std::string ABCD("ABCD");
 
@@ -64,6 +67,14 @@ TEST_CASE("container_common_test, group")
     REQUIRE_EQ(group_globally_on(int_mod_10, IntVector({12,34,22})), IntVectors({IntVector({12,22}),IntVector({34})}));
     REQUIRE_EQ(group_globally_on_labeled(int_mod_10, IntVector({12,34,22})), LabeledGroups({{2, IntVector({12,22})}, {4, IntVector({34})}}));
     REQUIRE_EQ(group_by(abs_diff_less_or_equal_3, IntVector({2,3,6,4,22,21,8,5})), IntVectors({{2,3,6,4},{22,21},{8,5}}));
+}
+
+TEST_CASE("container_common_test, separate")
+{
+    using namespace fplus;
+    IntVector values = {1, 2, 2, 3, 3, 4, 4, 4};
+    REQUIRE_EQ(separate(values), IntVectors({IntVector({1, 2, 3, 4}),IntVector({2, 3, 4}),IntVector({4})}));
+    REQUIRE_EQ(separate_on(int_mod_10, IntVector({12,22,34})), IntVectors({IntVector({12,34}),IntVector({22})}));
 }
 
 TEST_CASE("container_common_test, singleton_seq")
@@ -190,7 +201,17 @@ TEST_CASE("container_common_test, prepend_elem")
 TEST_CASE("container_common_test, append")
 {
     using namespace fplus;
+    std::vector<int> xs_empty;
     REQUIRE_EQ(append(xs, xs), xs2Times);
+    REQUIRE_EQ(append(xs, xs_arr), xs2Times);
+    REQUIRE_EQ(append(xs, xs_empty), xs);
+}
+
+TEST_CASE("container_common_test, append_convert")
+{
+    using namespace fplus;
+    REQUIRE_EQ(append_convert<decltype(xs2Times)>(xs_arr, xs_arr), xs2Times);
+    REQUIRE_EQ(append_convert<decltype(xs2Times)>(xs_arr, xs_deque), xs2Times);
 }
 
 TEST_CASE("container_common_test, interweave")
@@ -240,12 +261,12 @@ TEST_CASE("container_common_test, carthesian_product")
     typedef std::vector<char_pair> char_pair_vec;
     auto twoCharsToString = [](std::string::value_type x, std::string::value_type y) { std::string result; result += x; result += y; return result; };
     auto alwaysTrueCharAndChar = [](std::string::value_type, std::string::value_type) { return true; };
-    REQUIRE_EQ(carthesian_product_with(twoCharsToString, ABC, XY), string_vec({"AX", "AY", "BX", "BY", "CX", "CY"}));
-    REQUIRE_EQ(carthesian_product_where(alwaysTrueCharAndChar, ABC, XY), char_pair_vec({{'A','X'}, {'A','Y'}, {'B','X'}, {'B','Y'}, {'C','X'}, {'C','Y'}}));
+    REQUIRE_EQ(carthesian_product_with(twoCharsToString, ABC_, XY), string_vec({"AX", "AY", "BX", "BY", "CX", "CY"}));
+    REQUIRE_EQ(carthesian_product_where(alwaysTrueCharAndChar, ABC_, XY), char_pair_vec({{'A','X'}, {'A','Y'}, {'B','X'}, {'B','Y'}, {'C','X'}, {'C','Y'}}));
     auto charAndCharSumIsEven = [&](std::string::value_type x, std::string::value_type y) { return is_even_int(x + y); };
-    REQUIRE_EQ(carthesian_product_with_where(twoCharsToString, charAndCharSumIsEven, ABC, XY), string_vec({"AY", "BX", "CY"}));
-    REQUIRE_EQ(carthesian_product_where(charAndCharSumIsEven, ABC, XY), char_pair_vec({{'A','Y'}, {'B','X'}, {'C','Y'}}));
-    REQUIRE_EQ(carthesian_product(ABC, XY), char_pair_vec({{'A','X'}, {'A','Y'}, {'B','X'}, {'B','Y'}, {'C','X'}, {'C','Y'}}));
+    REQUIRE_EQ(carthesian_product_with_where(twoCharsToString, charAndCharSumIsEven, ABC_, XY), string_vec({"AY", "BX", "CY"}));
+    REQUIRE_EQ(carthesian_product_where(charAndCharSumIsEven, ABC_, XY), char_pair_vec({{'A','Y'}, {'B','X'}, {'C','Y'}}));
+    REQUIRE_EQ(carthesian_product(ABC_, XY), char_pair_vec({{'A','X'}, {'A','Y'}, {'B','X'}, {'B','Y'}, {'C','X'}, {'C','Y'}}));
     REQUIRE_EQ(carthesian_product_n(2, ABCD), string_vec({"AA", "AB", "AC", "AD", "BA", "BB", "BC", "BD", "CA", "CB", "CC", "CD", "DA", "DB", "DC", "DD"}));
     REQUIRE_EQ(carthesian_product_n(2, vec0123), IntVectors({{0,0}, {0,1}, {0,2}, {0,3}, {1,0}, {1,1}, {1,2}, {1,3}, {2,0}, {2,1}, {2,2}, {2,3}, {3,0}, {3,1}, {3,2}, {3,3}}));
     REQUIRE_EQ(carthesian_product_n(0, vec0123), IntVectors({IntVector()}));
@@ -623,7 +644,7 @@ TEST_CASE("container_common_test, nub")
     REQUIRE_EQ(nub_on(int_mod_10, IntVector({12,32,15})), IntVector({12,15}));
 }
 
-TEST_CASE("container_common_test, count_occurrences_by")
+TEST_CASE("container_common_test, coucount_occurrences_bynt_occurrences_on")
 {
     using namespace fplus;
     typedef std::map<int, std::size_t> IntSizeTMap;

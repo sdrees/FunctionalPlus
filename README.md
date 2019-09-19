@@ -1,9 +1,11 @@
 ![logo](logo/fplus.png)
 
-[![Build Status](https://travis-ci.org/Dobiasd/FunctionalPlus.svg?branch=master)][travis]
+[![Build Status Travis](https://travis-ci.org/Dobiasd/FunctionalPlus.svg?branch=master)][travis]
+[![Build Status AppVeyor](https://ci.appveyor.com/api/projects/status/github/dobiasd/FunctionalPlus)][appveyor]
 [![(License Boost 1.0)](https://img.shields.io/badge/license-boost%201.0-blue.svg)][license]
 
 [travis]: https://travis-ci.org/Dobiasd/FunctionalPlus
+[appveyor]: https://ci.appveyor.com/project/Dobiasd/functionalplus
 [license]: http://www.boost.org/LICENSE_1_0.txt
 
 
@@ -206,17 +208,18 @@ FunctionalPlus deduces types for you where possible. Let's take one line of code
     auto show_collats_seq = fplus::compose(collatz_seq, show_ints);
 ```
 
-`collatz_seq` is a function taking an `uint64_t` and returning a `list<uint64_t>`. `show_ints` takes a `list<uint64_t>` and returns a `string`. Thanks to making use of `function_traits` [written by kennyim](https://github.com/kennytm/utils/blob/master/traits.hpp) it is possible to automatically deduce the expression `fplus::compose(collatz_seq, show_ints)` being a function taking an `uint64_t` and returning a `string`, so you do not have to manually provide type hints to the compiler.
+`collatz_seq` is a function taking an `uint64_t` and returning a `list<uint64_t>`. `show_ints` takes a `list<uint64_t>` and returns a `string`. By making use of `function_traits`, [written by kennyim](https://github.com/kennytm/utils/blob/master/traits.hpp), it is possible to automatically deduce the expression `fplus::compose(collatz_seq, show_ints)` as being a function taking an `uint64_t` and returning a `string`, so you do not have to manually provide type hints to the compiler.
 
-In case you would accidentally pass two functions whose "connecting type" does not match, you will get a nice error message telling you exactly that, because FunctionalPlus uses compile time assertions where feasible to guard you from the sometimes confusingly long error messages compilers like to generate when faced with type errors in function templates.
+If two functions whose "connecting types" do not match are passed in, an unambiguous error message describing the issue will be generated. FunctionalPlus uses compile time assertions to avoid the confusingly long error messages compilers generate when faced with type errors in function templates.
 
-By changing the way you think about programming from "writing your own loops and nested ifs" to "using and composing small functions" you will first perhaps get more errors at compile time, but this will pay out in having fewer errors at runtime and in spending less time debugging.
-
+Changing the way you program from "writing your own loops and nested ifs" to "composing and using small functions" will result in more errors at compile time but will pay out by having fewer errors at runtime. Also, more precise compile time errors will reduce the time spent debugging.
 
 Tutorial
 --------
 
 The article "[Functional programming in C++ with the FunctionalPlus library; today: HackerRank challenge Gemstones](https://github.com/Dobiasd/articles/blob/master/functional_programming_in_cpp_with_the_functionalplus_library_today_hackerrank_challange_gemstones.md)" provides a smooth introduction into the library by showing how one could develop an elegant solution to a problem using the FunctionalPlus approach.
+
+Also on Udemy there is a [course "Functional Programming using C++"](https://www.udemy.com/functional-programming-using-cpp/) that makes heavy use of FunctionalPlus to explain general functional concepts.
 
 
 Forward application and composition
@@ -287,7 +290,7 @@ By the way, in case you need the parameters of a binary function in different or
 
 Finding the functions you need
 ------------------------------
-If you are looking for a specific FunctionalPlus function you do not know the name of yet, you can of course use the auto-complete feature of your IDE to browse the content of the `namespace fplus`. But the recommended way is to simply use the **[FunctionalPlus API search website](http://www.editgym.com/fplus-api-search/)**. You can quickly search by keywords or function type signatures with it. If you prefer, you can also simply [browse all available functions](http://www.editgym.com/fplus-api-search/explore.html).
+If you are looking for a specific FunctionalPlus function you do not know the name of yet, you can of course use the auto-complete feature of your IDE to browse the content of the `namespace fplus`. But the recommended way is to simply use the **[FunctionalPlus API search website](http://www.editgym.com/fplus-api-search/)**. You can quickly search by keywords or function type signatures with it. If you prefer, you can also simply [browse the source code using Sourcegraph](https://sourcegraph.com/github.com/Dobiasd/FunctionalPlus/-/tree/include/fplus).
 
 
 Performance
@@ -347,119 +350,13 @@ When using FunctionalPlus on the other hand you work with normal STL-containers.
 Requirements and Installation
 -----------------------------
 
-A **C++14**-compatible compiler is needed. Compilers from these versions on are fine: GCC 4.9, Clang 3.7 (libc++ 3.7) and Visual C++ 2015.
+A **C++14**-compatible compiler is needed. Compilers from these versions on are fine:
+* GCC ( >= 4.9 )
+* Clang ( >= 3.7 with libc++ >= 3.7 )
+* Visual Studio ( >= 2015 )
+* XCode ( >= 9 )
 
-You can install FunctionalPlus in **one of the following 5 ways**:
-
-### way 1: using [cmake](https://cmake.org/)
-
-```bash
-git clone https://github.com/Dobiasd/FunctionalPlus
-cd FunctionalPlus
-mkdir build
-cd build
-cmake ..
-make
-sudo make install
-```
-
-Building the tests (optional) requires [doctest](https://github.com/onqtam/doctest). Unit Tests are disabled by default – they are enabled and executed by:
-
-```bash
-# install doctest
-git clone https://github.com/onqtam/doctest
-cd doctest
-mkdir -p build && cd build
-cmake ..
-make
-sudo make install
-
-# install locales
-sudo locale-gen ru_RU
-sudo locale-gen ru_RU.UTF-8
-sudo locale-gen el_GR
-sudo locale-gen el_GR.UTF-8
-sudo localedef -c -i ru_RU -f CP1251 ru_RU.CP1251
-sudo localedef -c -i el_GR -f CP1253 el_GR.CP1253
-
-# enable, build and run unittests
-cmake -DFPLUS_BUILD_UNITTEST=ON ..
-make unittest
-```
-
-
-### way 2: using [cmake's ExternalProject](https://cmake.org/cmake/help/v3.0/module/ExternalProject.html)
-
-You can also add `FunctionalPlus` as an `ExternalProject` to your CMakeLists.
-
-The benefits of this:
-
-- No installation
-- Better version control with the `GIT_TAG`
-  - Always get the latest version when `GIT_TAG master`
-  - When you build your project, it will automatically update the headers if there is a change
-  - Or get the specific version by setting it to a specific commit point
-
-
-```cmake
-cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
-project(FplusMinimalExternalExample)
-set(CMAKE_CXX_STANDARD 14)
-
-include(ExternalProject)
-ExternalProject_Add(functional_plus
-  GIT_REPOSITORY https://github.com/Dobiasd/FunctionalPlus.git
-  GIT_TAG master
-
-  SOURCE_DIR "${CMAKE_BINARY_DIR}/thirdparty/fplus"
-
-  CONFIGURE_COMMAND ""
-  BUILD_COMMAND ""
-  INSTALL_COMMAND ""
-
-  LOG_DOWNLOAD ON
-  LOG_BUILD ON
-)
-set(FPLUS_INCLUDE_DIR ${CMAKE_BINARY_DIR}/thirdparty/fplus/include)
-include_directories(${FPLUS_INCLUDE_DIR})
-
-add_executable(main src/main.cpp)
-add_dependencies(main functional_plus)
-```
-
-
-### way 3: using [cget](https://github.com/pfultz2/cget/)
-
-```bash
-# Setup up toolchain to use c++14
-cget init --std=c++14
-# Test and install
-cget install Dobiasd/FunctionalPlus
-```
-
-
-### way 4: download manually
-
-Just [download](https://github.com/Dobiasd/FunctionalPlus/archive/master.zip)/extract FunctionalPlus and tell your compiler to use the `include` directory.
-
-
-### way 5: using [Conan C/C++ package manager](https://conan.io)
-
-Just add a *conanfile.txt* with FunctionalPlus as a requirement and chose the generator for your project.
-
-```
-[requires]
-functionalplus/v0.2-p1@Dobiasd/stable
-
-[generators]
-cmake
-```
-
-Then install it:
-
-```
-$ conan install conanfile.txt
-```
+Guides for different ways to install FunctionalPlus can be found in [INSTALL.md](INSTALL.md).
 
 
 Disclaimer
