@@ -29,41 +29,70 @@ public:
     const T& unsafe_get_just() const
     {
         assert(is_just());
-        return *reinterpret_cast<const T*>(&mem_[0]);
+        return *reinterpret_cast<const T*>(&value_);
     }
     T& unsafe_get_just()
     {
         assert(is_just());
-        return *reinterpret_cast<T*>(&mem_[0]);
+        return *reinterpret_cast<T*>(&value_);
     }
     typedef T type;
-#ifdef __GNUC__ // workaround for bug in GCC 4.9
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-#endif
-    maybe() : is_present_(false), mem_({}) {};
+    maybe() : is_present_(false), value_() {};
     ~maybe()
     {
         destruct_content();
     }
-    maybe(const T& val_just) : is_present_(true), mem_({})
+    maybe(const T& val_just) : is_present_(true), value_()
     {
-        new (&mem_[0]) T(val_just);
+        new (&value_) T(val_just);
     }
-    maybe(const maybe<T>& other) : is_present_(other.is_just()), mem_({})
+    maybe(T&& val_just) : is_present_(true), value_() {
+        new (&value_) T(std::move(val_just));
+    }
+    maybe(const maybe<T>& other) : is_present_(other.is_just()), value_()
     {
-        if (other.is_just())
-            new (&mem_[0]) T(other.unsafe_get_just());
+        if (is_present_)
+        {
+            new (&value_) T(other.unsafe_get_just());
+        }
     }
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
+    maybe(maybe<T>&& other) : is_present_(std::move(other.is_present_)), value_()
+    {
+        if (is_present_)
+        {
+            new (&value_) T(std::move(other.unsafe_get_just()));
+        }
+    }
+    maybe<T>& operator = (const T& other)
+    {
+        destruct_content();
+        is_present_ = true;
+        new (&value_) T(other);
+        return *this;
+    }
+    maybe& operator = (T&& other) {
+        destruct_content();
+        is_present_ = true;
+        new (&value_) T(std::move(other));
+        return *this;
+    }
     maybe<T>& operator = (const maybe<T>& other)
     {
         destruct_content();
-        is_present_ = other.is_just();
         if (other.is_just())
-            new (&mem_[0]) T(other.unsafe_get_just());
+        {
+            is_present_ = true;
+            new (&value_) T(other.unsafe_get_just());
+        }
+        return *this;
+    }
+    maybe& operator = (maybe<T>&& other) {
+        destruct_content();
+        is_present_ = std::move(other.is_present_);
+        if (is_present_)
+        {
+            new (&value_) T(std::move(other.unsafe_get_just()));
+        }
         return *this;
     }
 private:
@@ -71,13 +100,12 @@ private:
     {
         if (is_present_)
         {
-            T* ptr = reinterpret_cast<T*>(&mem_[0]);
-            (void)ptr; // silence warning under MSVC (C4189: 'ptr': local variable is initialized but not referenced)
-            ptr->~T();
+            is_present_ = false;
+            (*reinterpret_cast<const T*>(&value_)).~T();
         }
     }
     bool is_present_;
-    std::array<unsigned char, sizeof(T)> mem_;
+    typename std::aligned_storage<sizeof(T), alignof(T)>::type value_;
 };
 
 namespace internal
