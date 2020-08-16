@@ -19,6 +19,7 @@ make
 sudo make install
 ```
 
+<a id="cmake-dependency"></a>
 And then, you can add **FunctionalPlus** as a dependency in your cmake project as in the following.
 
 ```cmake
@@ -142,7 +143,7 @@ Just add a *conanfile.txt* with FunctionalPlus as a requirement and chose the ge
 
 ```
 [requires]
-functionalplus/v0.2.7-p0@Dobiasd/stable
+functionalplus/v0.2.9-p0@Dobiasd/stable
 
 [generators]
 cmake
@@ -163,3 +164,14 @@ conda install FunctionalPlus
 ```
 
 Visit [`conda-forge/FunctionalPlus-feedstock`](https://github.com/conda-forge/FunctionalPlus-feedstock) for more details.
+
+
+### way 7: using [Homebrew](https://brew.sh/)
+
+```bash
+brew install functionalplus
+```
+
+And then, you can add **FunctionalPlus** as a dependency in your cmake project [as in way 1](#cmake-dependency).
+
+If you're not using cmake, you might need to add `$(brew --prefix functionalplus)/include` to the additional include paths for your compiler.
