@@ -82,6 +82,7 @@ namespace internal
     void prepare_container(std::array<T, N>&, std::size_t size)
     {
         assert(size == N);
+        unused(size);
     }
 
     template <typename Y>
@@ -177,7 +178,7 @@ namespace internal
         std::size_t pos_;
     };
 
-#if _MSC_VER >= 1900
+#if defined(_MSC_VER) && _MSC_VER >= 1900
     template <typename T, std::size_t N>
     struct std::_Is_checked_helper<array_back_insert_iterator<T, N>>
         : public true_type
