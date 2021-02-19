@@ -4,8 +4,7 @@
 // (See accompanying file LICENSE_1_0.txt or copy at
 //  http://www.boost.org/LICENSE_1_0.txt)
 
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "doctest/doctest.h"
+#include <doctest/doctest.h>
 
 #include <vector>
 #include <cmath>
@@ -20,7 +19,7 @@ namespace
         // up to 30 ms difference, since the cpu scheduler might switch to another process during a sleep
         double max_acceptable_delta__task_scheduler = 0.03;
         #if defined(__APPLE__)
-            max_acceptable_delta__task_scheduler = 0.1; // travis osx builders are slow...
+            max_acceptable_delta__task_scheduler = 0.2;
         #endif
         REQUIRE(fabs(t1 - t2) < max_acceptable_delta__task_scheduler);
     }
